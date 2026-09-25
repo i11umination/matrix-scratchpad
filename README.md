@@ -17,7 +17,7 @@ npm run build
 
 ## GitHub Pages
 
-仓库名为 `matrix-scratchpad`，网页名称为“矩阵草稿台”。推送到 `main` 后，GitHub Actions 会安装依赖、构建项目并发布 `dist`。首次发布时，在仓库 **Settings → Pages → Build and deployment** 中将 Source 设为 **GitHub Actions**。网站地址为 `https://<GitHub 用户名>.github.io/matrix-scratchpad/`。
+仓库为 [i11umination/matrix-scratchpad](https://github.com/i11umination/matrix-scratchpad)，网页名称为“矩阵草稿台”。推送到 `main` 后，GitHub Actions 会安装依赖、构建项目并发布 `dist`。网站地址：[矩阵草稿台](https://i11umination.github.io/matrix-scratchpad/)。
 
 ## 第一版功能
 
