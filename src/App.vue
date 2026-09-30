@@ -81,10 +81,10 @@ watch(
 )
 
 watch(
-  () => [activeMatrix.value?.id, transformAxis.value] as const,
+  () => [activeMatrix.value?.id, transformAxis.value, transformKind.value] as const,
   () => {
-    targetIndex.value = 1
-    sourceIndex.value = Math.min(2, axisSize.value)
+    targetIndex.value = transformKind.value === 'add' ? Math.min(2, axisSize.value) : 1
+    sourceIndex.value = transformKind.value === 'add' ? 1 : Math.min(2, axisSize.value)
     operationError.value = ''
   },
 )
