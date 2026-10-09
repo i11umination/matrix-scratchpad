@@ -81,13 +81,18 @@ watch(
 )
 
 watch(
-  () => [activeMatrix.value?.id, transformAxis.value, transformKind.value] as const,
+  () => [selectedMatrixId.value, transformAxis.value, transformKind.value] as const,
   () => {
     targetIndex.value = transformKind.value === 'add' ? Math.min(2, axisSize.value) : 1
     sourceIndex.value = transformKind.value === 'add' ? 1 : Math.min(2, axisSize.value)
     operationError.value = ''
   },
 )
+
+watch(axisSize, (size) => {
+  targetIndex.value = Math.min(targetIndex.value, size)
+  sourceIndex.value = Math.min(sourceIndex.value, size)
+})
 
 function reportError(error: unknown) {
   noticeIsError.value = true
@@ -288,7 +293,7 @@ function matrixSummary(step: MatrixStep) {
         <div class="create-card create-card--multi">
           <div class="create-card-icon" aria-hidden="true"><span class="mini-matrix"><i></i><i></i><i></i><i></i></span></div>
           <div class="create-copy"><p class="eyebrow">{{ activeStep ? 'ADD MATRIX' : 'NEW MATRIX' }}</p><h3>{{ activeStep ? '添加另一张矩阵' : '设置矩阵大小' }}</h3>
-            <p>按行列数创建新矩阵或单位矩阵；新矩阵默认填 0，单位矩阵须为方阵。</p></div>
+            <p>按行列数创建新矩阵或单位矩阵；新矩阵默认填 0，单位矩阵须为方阵。单元格可输入 x、2x+y、x² 等表达式。</p></div>
           <div class="create-controls">
             <form class="dimension-form" @submit.prevent="createMatrix('zero')">
               <label><span>行数</span><input v-model.number="rows" type="number" min="1" max="10" /></label>
@@ -343,7 +348,7 @@ function matrixSummary(step: MatrixStep) {
               </select></label>
               <label class="form-field"><span>{{ transformKind === 'swap' ? '第一项' : '目标' }}</span><select v-model.number="targetIndex"><option v-for="choice in axisChoices" :key="choice" :value="choice">{{ transformAxis === 'row' ? 'R' : 'C' }}{{ choice }}</option></select></label>
               <label v-if="transformKind !== 'scale'" class="form-field"><span>{{ transformKind === 'add' ? '来源' : '第二项' }}</span><select v-model.number="sourceIndex"><option v-for="choice in axisChoices" :key="choice" :value="choice">{{ transformAxis === 'row' ? 'R' : 'C' }}{{ choice }}</option></select></label>
-              <label v-if="transformKind !== 'swap'" class="form-field coefficient-field"><span>{{ transformKind === 'scale' ? '倍乘系数' : '来源的倍数' }}</span><input v-model="coefficientInput" type="text" placeholder="例如 2/3" spellcheck="false" @input="operationError = ''" @keydown.enter.prevent="applyTransform" /></label>
+              <label v-if="transformKind !== 'swap'" class="form-field coefficient-field"><span>{{ transformKind === 'scale' ? '倍乘系数' : '来源的倍数' }}</span><input v-model="coefficientInput" type="text" placeholder="例如 2/3（仅数字）" spellcheck="false" @input="operationError = ''" @keydown.enter.prevent="applyTransform" /></label>
               <button class="button button--primary transform-submit" type="button" @click="applyTransform">应用并记录 <span aria-hidden="true">→</span></button>
             </div>
             <p v-if="operationError" class="form-error" role="alert">{{ operationError }}</p>

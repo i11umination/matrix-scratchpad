@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import {
-  formatRational,
-  isZero,
-  parseRational,
-  type Rational,
-} from '../domain/fraction'
+  formatPolynomial,
+  isZeroPolynomial,
+  parsePolynomial,
+  type Polynomial,
+} from '../domain/polynomial'
 
 interface CellPosition {
   row: number
@@ -13,7 +13,7 @@ interface CellPosition {
 }
 
 const props = defineProps<{
-  cells: Rational[][]
+  cells: Polynomial[][]
   name?: string
   editable?: boolean
   swapMode?: boolean
@@ -21,7 +21,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  commitCell: [payload: { row: number; column: number; value: Rational }]
+  commitCell: [payload: { row: number; column: number; value: Polynomial }]
   selectCell: [payload: CellPosition]
 }>()
 
@@ -32,13 +32,13 @@ function cellKey(row: number, column: number) {
   return `${row}:${column}`
 }
 
-function valueFor(row: number, column: number, value: Rational) {
-  return drafts[cellKey(row, column)] ?? formatRational(value)
+function valueFor(row: number, column: number, value: Polynomial) {
+  return drafts[cellKey(row, column)] ?? formatPolynomial(value)
 }
 
-function startEditing(row: number, column: number, value: Rational) {
+function startEditing(row: number, column: number, value: Polynomial) {
   const key = cellKey(row, column)
-  drafts[key] ??= isZero(value) ? '' : formatRational(value)
+  drafts[key] ??= isZeroPolynomial(value) ? '' : formatPolynomial(value)
   delete errors[key]
 }
 
@@ -57,7 +57,7 @@ function commit(row: number, column: number) {
   }
 
   try {
-    const value = parseRational(draft)
+    const value = parsePolynomial(draft)
     emit('commitCell', { row, column, value })
     delete errors[key]
     delete drafts[key]
@@ -125,12 +125,12 @@ function isSelected(row: number, column: number) {
               v-else-if="editable && swapMode"
               class="matrix-cell-button"
               type="button"
-              :aria-label="`选择矩阵 ${name ?? ''} 第 ${rowIndex + 1} 行，第 ${columnIndex + 1} 列，当前值 ${formatRational(value)}`"
+              :aria-label="`选择矩阵 ${name ?? ''} 第 ${rowIndex + 1} 行，第 ${columnIndex + 1} 列，当前值 ${formatPolynomial(value)}`"
               @click.stop="clickCell(rowIndex, columnIndex)"
             >
-              {{ formatRational(value) }}
+              {{ formatPolynomial(value) }}
             </button>
-            <span v-else class="matrix-value">{{ formatRational(value) }}</span>
+            <span v-else class="matrix-value">{{ formatPolynomial(value) }}</span>
             <span
               v-if="errors[cellKey(rowIndex, columnIndex)]"
               class="cell-error"

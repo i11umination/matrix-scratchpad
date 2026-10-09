@@ -1,13 +1,20 @@
 import { reactive } from 'vue'
 import {
-  add,
   formatRational,
   isZero,
-  multiply,
   parseRational,
   rational,
   type Rational,
 } from './fraction'
+import {
+  addPolynomial,
+  clonePolynomial,
+  constant,
+  equalPolynomial,
+  scalePolynomial,
+  zero,
+  type Polynomial,
+} from './polynomial'
 
 export type Axis = 'row' | 'column'
 export type ElementaryOperation = 'swap' | 'scale' | 'add'
@@ -15,7 +22,7 @@ export type ElementaryOperation = 'swap' | 'scale' | 'add'
 export interface MatrixRecord {
   id: number
   name: string
-  cells: Rational[][]
+  cells: Polynomial[][]
 }
 
 export interface MatrixStep {
@@ -30,7 +37,7 @@ interface CellPosition {
 }
 
 type UndoAction =
-  | { type: 'set-cell'; stepId: number; matrixId: number; row: number; column: number; previous: Rational }
+  | { type: 'set-cell'; stepId: number; matrixId: number; row: number; column: number; previous: Polynomial }
   | { type: 'swap-cells'; stepId: number; matrixId: number; first: CellPosition; second: CellPosition }
   | { type: 'append-step'; stepId: number; previousActiveId: number | null }
   | { type: 'add-matrix'; stepId: number; matrixId: number }
@@ -51,8 +58,8 @@ interface WorkspaceState {
 
 const STORAGE_KEY = 'matrix-scratchpad-draft-v1'
 
-function cloneMatrix(matrix: Rational[][]): Rational[][] {
-  return matrix.map((row) => row.map((value) => ({ ...value })))
+function cloneMatrix(matrix: Polynomial[][]): Polynomial[][] {
+  return matrix.map((row) => row.map(clonePolynomial))
 }
 
 function cloneMatrixRecord(matrix: MatrixRecord): MatrixRecord {
@@ -80,9 +87,9 @@ function validateDimensions(rows: number, columns: number) {
   }
 }
 
-function makeBlankMatrix(rows: number, columns: number): Rational[][] {
+function makeBlankMatrix(rows: number, columns: number): Polynomial[][] {
   return Array.from({ length: rows }, () =>
-    Array.from({ length: columns }, () => rational(0n)),
+    Array.from({ length: columns }, zero),
   )
 }
 
@@ -144,7 +151,7 @@ export function createWorkspace() {
     changed()
   }
 
-  function addMatrix(cells: Rational[][]) {
+  function addMatrix(cells: Polynomial[][]) {
     const id = state.nextMatrixId++
     const step = getActiveStep()
     let nameIndex = id
@@ -164,7 +171,7 @@ export function createWorkspace() {
     if (kind === 'identity' && rows !== columns) throw new Error('单位矩阵必须是方阵，请将行数和列数设为相同值。')
     const cells = makeBlankMatrix(rows, columns)
     if (kind === 'identity') {
-      for (let index = 0; index < rows; index += 1) cells[index][index] = rational(1n)
+      for (let index = 0; index < rows; index += 1) cells[index][index] = constant(rational(1n))
     }
     addMatrix(cells)
   }
@@ -191,11 +198,11 @@ export function createWorkspace() {
 
     const previous = cloneMatrixRecord(matrix)
     if (axis === 'row') {
-      if (direction === 'add') matrix.cells.push(Array.from({ length: matrix.cells[0].length }, () => rational(0n)))
+      if (direction === 'add') matrix.cells.push(Array.from({ length: matrix.cells[0].length }, zero))
       else matrix.cells.pop()
     } else {
       for (const row of matrix.cells) {
-        if (direction === 'add') row.push(rational(0n))
+        if (direction === 'add') row.push(zero())
         else row.pop()
       }
     }
@@ -229,14 +236,14 @@ export function createWorkspace() {
     changed()
   }
 
-  function setCell(stepId: number, matrixId: number, row: number, column: number, value: Rational) {
+  function setCell(stepId: number, matrixId: number, row: number, column: number, value: Polynomial) {
     const matrix = findMatrix(findStep(state, stepId), matrixId)
     const previous = matrix?.cells[row]?.[column]
     if (!matrix || !previous) return
-    if (previous.numerator === value.numerator && previous.denominator === value.denominator) return
+    if (equalPolynomial(previous, value)) return
 
     state.undoStack.push({ type: 'set-cell', stepId, matrixId, row, column, previous })
-    matrix.cells[row][column] = { ...value }
+    matrix.cells[row][column] = clonePolynomial(value)
     changed()
   }
 
@@ -299,12 +306,12 @@ export function createWorkspace() {
       if (axis === 'row') [cells[target], cells[source]] = [cells[source], cells[target]]
       else for (const row of cells) [row[target], row[source]] = [row[source], row[target]]
     } else if (operation === 'scale') {
-      if (axis === 'row') cells[target] = cells[target].map((value) => multiply(value, coefficient))
-      else for (const row of cells) row[target] = multiply(row[target], coefficient)
+      if (axis === 'row') cells[target] = cells[target].map((value) => scalePolynomial(value, coefficient))
+      else for (const row of cells) row[target] = scalePolynomial(row[target], coefficient)
     } else if (axis === 'row') {
-      cells[target] = cells[target].map((value, column) => add(value, multiply(coefficient, cells[source][column])))
+      cells[target] = cells[target].map((value, column) => addPolynomial(value, scalePolynomial(cells[source][column], coefficient)))
     } else {
-      for (const row of cells) row[target] = add(row[target], multiply(coefficient, row[source]))
+      for (const row of cells) row[target] = addPolynomial(row[target], scalePolynomial(row[source], coefficient))
     }
 
     const operationText = operation === 'swap'
@@ -341,7 +348,7 @@ export function createWorkspace() {
     switch (action.type) {
       case 'set-cell': {
         const matrix = findMatrix(findStep(state, action.stepId), action.matrixId)
-        if (matrix) matrix.cells[action.row][action.column] = { ...action.previous }
+        if (matrix) matrix.cells[action.row][action.column] = clonePolynomial(action.previous)
         break
       }
       case 'swap-cells': {
