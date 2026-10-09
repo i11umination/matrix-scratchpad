@@ -1,16 +1,16 @@
 import { reactive } from 'vue'
 import {
-  formatRational,
-  isZero,
   parseRational,
   rational,
-  type Rational,
 } from './fraction'
 import {
   addPolynomial,
   clonePolynomial,
   constant,
   equalPolynomial,
+  formatPolynomial,
+  isZeroPolynomial,
+  multiplyPolynomial,
   scalePolynomial,
   zero,
   type Polynomial,
@@ -280,7 +280,7 @@ export function createWorkspace() {
     operation: ElementaryOperation,
     target: number,
     source: number,
-    coefficient: Rational,
+    coefficient: Polynomial,
   ) {
     const active = getActiveStep()
     const selected = findMatrix(active, matrixId)
@@ -298,20 +298,24 @@ export function createWorkspace() {
     }
 
     if (operation === 'swap' && target === source) throw new Error('请选择两个不同的行或列。')
-    if (operation === 'scale' && isZero(coefficient)) throw new Error('倍乘系数不能为 0。')
+    if (operation === 'scale' && isZeroPolynomial(coefficient)) throw new Error('倍乘系数不能为 0。')
     if (operation === 'add' && target === source) throw new Error('源行/列与目标行/列不能相同。')
 
-    const coefficientLabel = formatRational(coefficient)
+    const scalar = coefficient.terms['']
+    if (operation === 'scale' && (Object.keys(coefficient.terms).length !== 1 || !scalar)) {
+      throw new Error('倍乘系数只能输入数字或分数。')
+    }
+    const coefficientLabel = formatPolynomial(coefficient)
     if (operation === 'swap') {
       if (axis === 'row') [cells[target], cells[source]] = [cells[source], cells[target]]
       else for (const row of cells) [row[target], row[source]] = [row[source], row[target]]
     } else if (operation === 'scale') {
-      if (axis === 'row') cells[target] = cells[target].map((value) => scalePolynomial(value, coefficient))
-      else for (const row of cells) row[target] = scalePolynomial(row[target], coefficient)
+      if (axis === 'row') cells[target] = cells[target].map((value) => scalePolynomial(value, scalar))
+      else for (const row of cells) row[target] = scalePolynomial(row[target], scalar)
     } else if (axis === 'row') {
-      cells[target] = cells[target].map((value, column) => addPolynomial(value, scalePolynomial(cells[source][column], coefficient)))
+      cells[target] = cells[target].map((value, column) => addPolynomial(value, multiplyPolynomial(cells[source][column], coefficient)))
     } else {
-      for (const row of cells) row[target] = addPolynomial(row[target], scalePolynomial(row[source], coefficient))
+      for (const row of cells) row[target] = addPolynomial(row[target], multiplyPolynomial(row[source], coefficient))
     }
 
     const operationText = operation === 'swap'
