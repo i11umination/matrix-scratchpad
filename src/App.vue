@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import MatrixGrid from './components/MatrixGrid.vue'
-import { parseRational } from './domain/fraction'
-import { constant, isZeroPolynomial, parsePolynomial, zero } from './domain/polynomial'
+import { isZeroPolynomial, parsePolynomial, zero } from './domain/polynomial'
 import {
   createWorkspace,
   type Axis,
@@ -219,11 +218,7 @@ function applyTransform() {
   if (!activeMatrix.value) return
   operationError.value = ''
   try {
-    const coefficient = transformKind.value === 'swap'
-      ? zero()
-      : transformKind.value === 'scale'
-        ? constant(parseRational(coefficientInput.value))
-        : parsePolynomial(coefficientInput.value)
+    const coefficient = transformKind.value === 'swap' ? zero() : parsePolynomial(coefficientInput.value)
     if (transformKind.value === 'scale' && isZeroPolynomial(coefficient)) throw new Error('倍乘系数不能为 0。')
     const targetName = activeMatrix.value.name
     workspace.applyElementary(
@@ -353,11 +348,11 @@ function matrixSummary(step: MatrixStep) {
               </select></label>
               <label class="form-field"><span>{{ transformKind === 'swap' ? '第一项' : '目标' }}</span><select v-model.number="targetIndex"><option v-for="choice in axisChoices" :key="choice" :value="choice">{{ transformAxis === 'row' ? 'R' : 'C' }}{{ choice }}</option></select></label>
               <label v-if="transformKind !== 'scale'" class="form-field"><span>{{ transformKind === 'add' ? '来源' : '第二项' }}</span><select v-model.number="sourceIndex"><option v-for="choice in axisChoices" :key="choice" :value="choice">{{ transformAxis === 'row' ? 'R' : 'C' }}{{ choice }}</option></select></label>
-              <label v-if="transformKind !== 'swap'" class="form-field coefficient-field"><span>{{ transformKind === 'scale' ? '倍乘系数' : '来源的倍数' }}</span><input v-model="coefficientInput" type="text" :placeholder="transformKind === 'scale' ? '例如 2/3（仅数字）' : '例如 x 或 1/2x+1'" spellcheck="false" @input="operationError = ''" @keydown.enter.prevent="applyTransform" /></label>
+              <label v-if="transformKind !== 'swap'" class="form-field coefficient-field"><span>{{ transformKind === 'scale' ? '倍乘系数' : '来源的倍数' }}</span><input v-model="coefficientInput" type="text" :placeholder="transformKind === 'scale' ? '例如 2/3 或 x' : '例如 x 或 1/2x+1'" spellcheck="false" @input="operationError = ''" @keydown.enter.prevent="applyTransform" /></label>
               <button class="button button--primary transform-submit" type="button" @click="applyTransform">应用并记录 <span aria-hidden="true">→</span></button>
             </div>
             <p v-if="operationError" class="form-error" role="alert">{{ operationError }}</p>
-            <p class="transform-example"><span aria-hidden="true">↳</span>{{ transformKind === 'swap' ? `交换所选的两${transformAxis === 'row' ? '行' : '列'}` : transformKind === 'scale' ? `将所选${transformAxis === 'row' ? '行' : '列'}的每个元素乘以系数` : `目标${transformAxis === 'row' ? '行' : '列'}加上来源${transformAxis === 'row' ? '行' : '列'}的指定倍数` }}</p>
+            <p class="transform-example"><span aria-hidden="true">↳</span>{{ transformKind === 'swap' ? `交换所选的两${transformAxis === 'row' ? '行' : '列'}` : transformKind === 'scale' ? `将所选${transformAxis === 'row' ? '行' : '列'}的每个元素乘以系数；含未知数时须满足系数 ≠ 0，条件会记录到新步骤` : `目标${transformAxis === 'row' ? '行' : '列'}加上来源${transformAxis === 'row' ? '行' : '列'}的指定倍数` }}</p>
           </section>
 
           <section class="comparison-section" aria-labelledby="comparison-title">

@@ -11,7 +11,6 @@ import {
   formatPolynomial,
   isZeroPolynomial,
   multiplyPolynomial,
-  scalePolynomial,
   zero,
   type Polynomial,
 } from './polynomial'
@@ -301,17 +300,13 @@ export function createWorkspace() {
     if (operation === 'scale' && isZeroPolynomial(coefficient)) throw new Error('倍乘系数不能为 0。')
     if (operation === 'add' && target === source) throw new Error('源行/列与目标行/列不能相同。')
 
-    const scalar = coefficient.terms['']
-    if (operation === 'scale' && (Object.keys(coefficient.terms).length !== 1 || !scalar)) {
-      throw new Error('倍乘系数只能输入数字或分数。')
-    }
     const coefficientLabel = formatPolynomial(coefficient)
     if (operation === 'swap') {
       if (axis === 'row') [cells[target], cells[source]] = [cells[source], cells[target]]
       else for (const row of cells) [row[target], row[source]] = [row[source], row[target]]
     } else if (operation === 'scale') {
-      if (axis === 'row') cells[target] = cells[target].map((value) => scalePolynomial(value, scalar))
-      else for (const row of cells) row[target] = scalePolynomial(row[target], scalar)
+      if (axis === 'row') cells[target] = cells[target].map((value) => multiplyPolynomial(value, coefficient))
+      else for (const row of cells) row[target] = multiplyPolynomial(row[target], coefficient)
     } else if (axis === 'row') {
       cells[target] = cells[target].map((value, column) => addPolynomial(value, multiplyPolynomial(cells[source][column], coefficient)))
     } else {
@@ -323,7 +318,10 @@ export function createWorkspace() {
       : operation === 'scale'
         ? `${symbol}${indexOf(target)} ← (${coefficientLabel})${symbol}${indexOf(target)}`
         : `${symbol}${indexOf(target)} ← ${symbol}${indexOf(target)} + (${coefficientLabel})${symbol}${indexOf(source)}`
-    appendStep(active.matrices.map((matrix) => matrix.id === matrixId ? { ...matrix, cells } : matrix), `${selected.name}: ${operationText}`)
+    const condition = operation === 'scale' && Object.keys(coefficient.terms).some((key) => key !== '')
+      ? `；条件：(${coefficientLabel}) ≠ 0`
+      : ''
+    appendStep(active.matrices.map((matrix) => matrix.id === matrixId ? { ...matrix, cells } : matrix), `${selected.name}: ${operationText}${condition}`)
   }
 
   function setNote(stepId: number, note: string) {
